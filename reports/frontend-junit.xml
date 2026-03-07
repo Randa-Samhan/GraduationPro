@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<testsuites name="vitest tests" tests="10" failures="0" errors="0" time="0.9616041">
+    <testsuite name="src/alldata.test.js" timestamp="2026-01-25T10:48:02.445Z" hostname="Abdallah" tests="5" failures="0" errors="0" skipped="0" time="0.0104785">
+        <testcase classname="src/alldata.test.js" name="alldata (unit) &gt; addCitizen (positive): adds a new citizen" time="0.0042498">
+        </testcase>
+        <testcase classname="src/alldata.test.js" name="alldata (unit) &gt; addCitizen (positive): updates existing citizen when idNumber already exists" time="0.0007655">
+        </testcase>
+        <testcase classname="src/alldata.test.js" name="alldata (unit) &gt; updateCitizen (negative): returns null when citizen does not exist" time="0.0004895">
+        </testcase>
+        <testcase classname="src/alldata.test.js" name="alldata (unit) &gt; car request flow (integration): addCarRequest -&gt; approveCarRequest creates a car" time="0.0015379">
+        </testcase>
+        <testcase classname="src/alldata.test.js" name="alldata (unit) &gt; rejectCarRequest (negative): returns null for missing requestId" time="0.0006587">
+        </testcase>
+    </testsuite>
+    <testsuite name="src/pages/Login.test.jsx" timestamp="2026-01-25T10:48:02.450Z" hostname="Abdallah" tests="2" failures="0" errors="0" skipped="0" time="0.9357459">
+        <testcase classname="src/pages/Login.test.jsx" name="Login (integration) &gt; positive: logs in and navigates to the role dashboard" time="0.6046171">
+            <system-err>
+⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition.
+⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath.
+
+            </system-err>
+        </testcase>
+        <testcase classname="src/pages/Login.test.jsx" name="Login (integration) &gt; negative: shows an error message when credentials are invalid" time="0.3204447">
+        </testcase>
+    </testsuite>
+    <testsuite name="src/services/api.test.js" timestamp="2026-01-25T10:48:02.453Z" hostname="Abdallah" tests="3" failures="0" errors="0" skipped="0" time="0.0153797">
+        <testcase classname="src/services/api.test.js" name="services/api &gt; login (positive): calls the API and returns parsed JSON" time="0.0080157">
+        </testcase>
+        <testcase classname="src/services/api.test.js" name="services/api &gt; login (negative): throws API error message when response is not ok" time="0.002386">
+        </testcase>
+        <testcase classname="src/services/api.test.js" name="services/api &gt; getCitizens (positive): includes role filter in querystring when provided" time="0.0024598">
+        </testcase>
+    </testsuite>
+</testsuites>

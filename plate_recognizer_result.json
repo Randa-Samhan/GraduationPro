@@ -1,0 +1,42 @@
+{
+  "processing_time": 37.804,
+  "results": [
+    {
+      "box": {
+        "xmin": 252,
+        "ymin": 203,
+        "xmax": 820,
+        "ymax": 376
+      },
+      "plate": "52923h",
+      "region": {
+        "code": "pt",
+        "score": 0.06
+      },
+      "score": 0.998,
+      "candidates": [
+        {
+          "score": 0.998,
+          "plate": "52923h"
+        }
+      ],
+      "dscore": 0.876,
+      "vehicle": {
+        "score": 0.617,
+        "type": "Sedan",
+        "box": {
+          "xmin": 3,
+          "ymin": 6,
+          "xmax": 1039,
+          "ymax": 508
+        }
+      }
+    }
+  ],
+  "filename": "1304_gEnfn_number-plates-explained-with-ilmg.jpg",
+  "version": 1,
+  "camera_id": null,
+  "timestamp": "2025-12-24T13:04:23.528812Z",
+  "image_width": 1047,
+  "image_height": 513
+}
