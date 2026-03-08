@@ -1,4 +1,31 @@
+import {
+  addCitizen as addCitizenLocal,
+  citizens as localCitizens,
+  deleteCitizen as deleteCitizenLocal,
+  demotePoliceToCitizen as demotePoliceToCitizenLocal,
+  findCitizen as findCitizenLocal,
+  findCitizenByIdNumber as findCitizenByIdNumberLocal,
+  promotePoliceOfficer as promotePoliceOfficerLocal,
+  updateCitizen as updateCitizenLocal,
+} from '../alldata';
+
 const API_BASE_URL = 'http://localhost:5000/api';
+
+const isNetworkError = (error) => (
+  error instanceof TypeError
+  || /failed to fetch|networkerror|load failed/i.test(error?.message || '')
+);
+
+const withCitizenFallback = async (remoteRequest, fallbackRequest) => {
+  try {
+    return await remoteRequest();
+  } catch (error) {
+    if (!isNetworkError(error)) {
+      throw error;
+    }
+    return fallbackRequest();
+  }
+};
 
 async function apiCall(endpoint, options = {}) {
   try {
@@ -37,32 +64,52 @@ async function apiCall(endpoint, options = {}) {
 }
 
 export const login = async (idNumber, password) => {
-  return apiCall('/citizens/login', {
+  return withCitizenFallback(() => apiCall('/citizens/login', {
     method: 'POST',
     body: JSON.stringify({ idNumber, password }),
+  }), () => {
+    const citizen = findCitizenLocal(idNumber, password);
+    if (!citizen) {
+      throw new Error('Invalid credentials');
+    }
+    return citizen;
   });
 };
 
 export const getCitizens = async (role = null) => {
   const url = role ? `/citizens?role=${role}` : '/citizens';
-  return apiCall(url);
+  return withCitizenFallback(() => apiCall(url), () => (
+    role ? localCitizens.filter((citizen) => citizen.role === role) : [...localCitizens]
+  ));
 };
 
 export const getCitizen = async (idNumber) => {
-  return apiCall(`/citizens/${idNumber}`);
-};
-
-export const addCitizen = async (citizenData) => {
-  return apiCall('/citizens', {
-    method: 'POST',
-    body: JSON.stringify(citizenData),
+  return withCitizenFallback(() => apiCall(`/citizens/${idNumber}`), () => {
+    const citizen = findCitizenByIdNumberLocal(idNumber);
+    if (!citizen) {
+      throw new Error('Citizen not found');
+    }
+    return citizen;
   });
 };
 
+export const addCitizen = async (citizenData) => {
+  return withCitizenFallback(() => apiCall('/citizens', {
+    method: 'POST',
+    body: JSON.stringify(citizenData),
+  }), () => addCitizenLocal(citizenData));
+};
+
 export const updateCitizen = async (idNumber, citizenData) => {
-  return apiCall(`/citizens/${idNumber}`, {
+  return withCitizenFallback(() => apiCall(`/citizens/${idNumber}`, {
     method: 'PUT',
     body: JSON.stringify(citizenData),
+  }), () => {
+    const citizen = updateCitizenLocal(idNumber, citizenData);
+    if (!citizen) {
+      throw new Error('Citizen not found');
+    }
+    return citizen;
   });
 };
 
@@ -81,21 +128,39 @@ export const verifyEmailCode = async (idNumber, newEmail, verificationCode) => {
 };
 
 export const deleteCitizen = async (idNumber) => {
-  return apiCall(`/citizens/${idNumber}`, {
+  return withCitizenFallback(() => apiCall(`/citizens/${idNumber}`, {
     method: 'DELETE',
+  }), () => {
+    const deleted = deleteCitizenLocal(idNumber);
+    if (!deleted) {
+      throw new Error('Citizen not found');
+    }
+    return { success: true };
   });
 };
 
 export const promotePoliceOfficer = async (idNumber, rank) => {
-  return apiCall(`/citizens/${idNumber}/promote`, {
+  return withCitizenFallback(() => apiCall(`/citizens/${idNumber}/promote`, {
     method: 'PUT',
     body: JSON.stringify({ rank }),
+  }), () => {
+    const promoted = promotePoliceOfficerLocal(idNumber, rank);
+    if (!promoted) {
+      throw new Error('Police officer not found');
+    }
+    return promoted;
   });
 };
 
 export const demotePoliceToCitizen = async (idNumber) => {
-  return apiCall(`/citizens/${idNumber}/demote`, {
+  return withCitizenFallback(() => apiCall(`/citizens/${idNumber}/demote`, {
     method: 'PUT',
+  }), () => {
+    const demoted = demotePoliceToCitizenLocal(idNumber);
+    if (!demoted) {
+      throw new Error('Police officer not found');
+    }
+    return demoted;
   });
 };
 
@@ -295,7 +360,14 @@ export const checkCitizenExists = async (idNumber) => {
 };
 
 export const checkCitizenAccount = async (idNumber) => {
-  return apiCall(`/citizens/${idNumber}/check-account`);
+  return withCitizenFallback(() => apiCall(`/citizens/${idNumber}/check-account`), () => {
+    const citizen = findCitizenByIdNumberLocal(idNumber);
+    return {
+      exists: Boolean(citizen),
+      hasAccount: Boolean(citizen?.password),
+      role: citizen?.role || null,
+    };
+  });
 };
 
 export const getCitizensByRole = async (role) => {

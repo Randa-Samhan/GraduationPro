@@ -2,23 +2,61 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { addCitizen, checkCitizenExists, findCitizenByIdNumber } from '../../services/api';
-import { FaIdCard, FaUser, FaPhone, FaMapMarkerAlt, FaCalendarAlt, FaVenusMars, FaFlag, FaSave, FaArrowRight } from 'react-icons/fa';
+import {
+  FaArrowRight,
+  FaCalendarAlt,
+  FaFlag,
+  FaIdCard,
+  FaMapMarkerAlt,
+  FaPhone,
+  FaSave,
+  FaUser,
+  FaUserShield,
+  FaVenusMars,
+} from 'react-icons/fa';
+
+const ROLE_OPTIONS = ['driver', 'police', 'interior', 'transport', 'court', 'traffic'];
+const DEFAULT_GENDER = 'ذكر';
+const DEFAULT_NATIONALITY = 'فلسطيني';
+
+const buildInitialFormData = () => ({
+  idNumber: '',
+  name: '',
+  phone: '',
+  address: '',
+  dateOfBirth: '',
+  gender: DEFAULT_GENDER,
+  nationality: DEFAULT_NATIONALITY,
+  role: 'driver',
+  licenseNumber: '',
+  badgeNumber: '',
+  rank: '',
+  department: '',
+});
+
+const mapCitizenToFormData = (citizen) => ({
+  idNumber: citizen.idNumber || '',
+  name: citizen.name || '',
+  phone: citizen.phone || '',
+  address: citizen.address || '',
+  dateOfBirth: citizen.dateOfBirth || '',
+  gender: citizen.gender || DEFAULT_GENDER,
+  nationality: citizen.nationality || DEFAULT_NATIONALITY,
+  role: citizen.role || 'driver',
+  licenseNumber: citizen.licenseNumber || '',
+  badgeNumber: citizen.badgeNumber || '',
+  rank: citizen.rank || '',
+  department: citizen.department || '',
+});
 
 const AddCitizen = () => {
   const navigate = useNavigate();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { idNumber } = useParams();
-  const defaultGender = 'ذكر';
-  const defaultNationality = 'فلسطيني';
-  const [formData, setFormData] = useState({
-    idNumber: '',
-    name: '',
-    phone: '',
-    address: '',
-    dateOfBirth: '',
-    gender: defaultGender,
-    nationality: defaultNationality
-  });
+  const roleLabel = t('common.role') === 'common.role'
+    ? (i18n.language === 'ar' ? 'الدور' : 'Role')
+    : t('common.role');
+  const [formData, setFormData] = useState(buildInitialFormData);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
@@ -26,67 +64,72 @@ const AddCitizen = () => {
 
   useEffect(() => {
     const loadCitizen = async () => {
-      if (idNumber) {
-        try {
-          const citizen = await findCitizenByIdNumber(idNumber);
-          if (citizen) {
-            setFormData({
-              idNumber: citizen.idNumber,
-              name: citizen.name || '',
-              phone: citizen.phone || '',
-              address: citizen.address || '',
-              dateOfBirth: citizen.dateOfBirth || '',
-              gender: citizen.gender || defaultGender,
-              nationality: citizen.nationality || defaultNationality
-            });
-            setIsEditMode(true);
-          }
-        } catch (error) {
-          console.error('Error loading citizen:', error);
+      if (!idNumber) return;
+
+      try {
+        const citizen = await findCitizenByIdNumber(idNumber);
+        if (citizen) {
+          setFormData(mapCitizenToFormData(citizen));
+          setIsEditMode(true);
         }
+      } catch (loadError) {
+        console.error('Error loading citizen:', loadError);
       }
     };
+
     loadCitizen();
   }, [idNumber]);
 
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setFormData({ ...formData, [name]: value });
+  const handleInputChange = (event) => {
+    const { name, value } = event.target;
+
+    setFormData((prev) => {
+      const next = { ...prev, [name]: value };
+
+      if (name === 'role' && value !== 'driver') {
+        next.licenseNumber = '';
+      }
+
+      if (name === 'role' && value !== 'police') {
+        next.badgeNumber = '';
+        next.rank = '';
+        next.department = '';
+      }
+
+      return next;
+    });
+
     setError('');
     setSuccess('');
   };
 
-  const handleIdNumberChange = async (e) => {
-    const value = e.target.value;
-    setFormData({ ...formData, idNumber: value });
+  const handleIdNumberChange = async (event) => {
+    const value = event.target.value;
+
+    setFormData((prev) => ({ ...prev, idNumber: value }));
     setError('');
     setSuccess('');
-    
-    if (value.length >= 9) {
-      try {
-        const citizen = await findCitizenByIdNumber(value);
-        if (citizen) {
-          setFormData({
-            idNumber: citizen.idNumber,
-            name: citizen.name || '',
-            phone: citizen.phone || '',
-            address: citizen.address || '',
-            dateOfBirth: citizen.dateOfBirth || '',
-            gender: citizen.gender || defaultGender,
-            nationality: citizen.nationality || defaultNationality
-          });
-          setIsEditMode(true);
-        } else {
-          setIsEditMode(false);
-        }
-      } catch (error) {
+
+    if (value.length < 9) {
+      setIsEditMode(false);
+      return;
+    }
+
+    try {
+      const citizen = await findCitizenByIdNumber(value);
+      if (citizen) {
+        setFormData(mapCitizenToFormData(citizen));
+        setIsEditMode(true);
+      } else {
         setIsEditMode(false);
       }
+    } catch {
+      setIsEditMode(false);
     }
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const handleSubmit = async (event) => {
+    event.preventDefault();
     setError('');
     setSuccess('');
 
@@ -96,7 +139,7 @@ const AddCitizen = () => {
     }
 
     setLoading(true);
-    
+
     try {
       if (!isEditMode) {
         const exists = await checkCitizenExists(formData.idNumber);
@@ -106,37 +149,33 @@ const AddCitizen = () => {
           return;
         }
       }
-      
+
       const citizenData = {
         ...formData,
-        role: 'driver'
+        role: formData.role,
+        licenseNumber: formData.role === 'driver' ? formData.licenseNumber : '',
+        badgeNumber: formData.role === 'police' ? formData.badgeNumber : '',
+        rank: formData.role === 'police' ? formData.rank : '',
+        department: formData.role === 'police' ? formData.department : '',
       };
-      
+
       if (!isEditMode) {
         citizenData.password = '00000';
       }
-      
+
       await addCitizen(citizenData);
       setSuccess(isEditMode ? t('admin.updateCitizenSuccess') : t('admin.addCitizenSuccess'));
-      
+
       setTimeout(() => {
         if (!isEditMode) {
-          setFormData({
-            idNumber: '',
-            name: '',
-            phone: '',
-            address: '',
-            dateOfBirth: '',
-            gender: defaultGender,
-            nationality: defaultNationality
-          });
+          setFormData(buildInitialFormData());
           setIsEditMode(false);
         }
         setSuccess('');
       }, 2000);
-    } catch (err) {
-      console.error('Error adding citizen:', err);
-      setError(err.message || t('admin.saveCitizenError'));
+    } catch (saveError) {
+      console.error('Error adding citizen:', saveError);
+      setError(saveError.message || t('admin.saveCitizenError'));
     } finally {
       setLoading(false);
     }
@@ -215,6 +254,26 @@ const AddCitizen = () => {
 
             <div>
               <label className="block text-gray-700 font-semibold mb-2">
+                <FaUserShield className="inline ml-2 text-blue-600" />
+                {roleLabel} *
+              </label>
+              <select
+                name="role"
+                value={formData.role}
+                onChange={handleInputChange}
+                className="input-field w-full transform transition-all duration-200 focus:scale-105"
+                required
+              >
+                {ROLE_OPTIONS.map((role) => (
+                  <option key={role} value={role}>
+                    {t(`roles.${role}`)}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-gray-700 font-semibold mb-2">
                 <FaCalendarAlt className="inline ml-2 text-blue-600" />
                 {t('citizens.dateOfBirth')}
               </label>
@@ -272,6 +331,72 @@ const AddCitizen = () => {
                 placeholder={t('common.address')}
               />
             </div>
+
+            {formData.role === 'driver' && (
+              <div className="md:col-span-2">
+                <label className="block text-gray-700 font-semibold mb-2">
+                  <FaIdCard className="inline ml-2 text-blue-600" />
+                  {t('auth.licenseNumber')}
+                </label>
+                <input
+                  type="text"
+                  name="licenseNumber"
+                  value={formData.licenseNumber}
+                  onChange={handleInputChange}
+                  className="input-field w-full transform transition-all duration-200 focus:scale-105"
+                  placeholder={t('auth.licenseNumber')}
+                />
+              </div>
+            )}
+
+            {formData.role === 'police' && (
+              <>
+                <div>
+                  <label className="block text-gray-700 font-semibold mb-2">
+                    <FaIdCard className="inline ml-2 text-blue-600" />
+                    {t('auth.badgeNumber')}
+                  </label>
+                  <input
+                    type="text"
+                    name="badgeNumber"
+                    value={formData.badgeNumber}
+                    onChange={handleInputChange}
+                    className="input-field w-full transform transition-all duration-200 focus:scale-105"
+                    placeholder={t('auth.badgeNumber')}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-gray-700 font-semibold mb-2">
+                    <FaUserShield className="inline ml-2 text-blue-600" />
+                    {t('auth.rank')}
+                  </label>
+                  <input
+                    type="text"
+                    name="rank"
+                    value={formData.rank}
+                    onChange={handleInputChange}
+                    className="input-field w-full transform transition-all duration-200 focus:scale-105"
+                    placeholder={t('auth.rank')}
+                  />
+                </div>
+
+                <div className="md:col-span-2">
+                  <label className="block text-gray-700 font-semibold mb-2">
+                    <FaUserShield className="inline ml-2 text-blue-600" />
+                    {t('auth.department')}
+                  </label>
+                  <input
+                    type="text"
+                    name="department"
+                    value={formData.department}
+                    onChange={handleInputChange}
+                    className="input-field w-full transform transition-all duration-200 focus:scale-105"
+                    placeholder={t('auth.department')}
+                  />
+                </div>
+              </>
+            )}
           </div>
 
           {error && (
@@ -301,4 +426,3 @@ const AddCitizen = () => {
 };
 
 export default AddCitizen;
-

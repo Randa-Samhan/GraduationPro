@@ -32,6 +32,7 @@
     "time": "Time",
     "at": "at",
     "status": "Status",
+    "role": "Role",
     "actions": "Actions",
     "details": "Details",
     "note": "Note",

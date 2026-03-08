@@ -6,10 +6,13 @@ import { FaIdCard, FaUser, FaPhone, FaMapMarkerAlt, FaTrash, FaPlusCircle, FaArr
 
 const AllCitizens = () => {
   const navigate = useNavigate();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [citizensList, setCitizensList] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
+  const roleLabel = t('common.role') === 'common.role'
+    ? (i18n.language === 'ar' ? 'الدور' : 'Role')
+    : t('common.role');
 
   useEffect(() => {
     const loadData = async () => {
@@ -47,7 +50,8 @@ const AllCitizens = () => {
 
   const filteredCitizens = citizensList.filter(citizen =>
     citizen.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    citizen.idNumber.includes(searchTerm)
+    citizen.idNumber.includes(searchTerm) ||
+    t(`roles.${citizen.role || 'driver'}`).toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   if (loading) {
@@ -107,6 +111,7 @@ const AllCitizens = () => {
                 <th className="px-6 py-4 text-right font-bold">{t('common.name')}</th>
                 <th className="px-6 py-4 text-right font-bold">{t('common.phone')}</th>
                 <th className="px-6 py-4 text-right font-bold">{t('common.address')}</th>
+                <th className="px-6 py-4 text-right font-bold">{roleLabel}</th>
                 <th className="px-6 py-4 text-right font-bold">{t('citizens.dateOfBirth')}</th>
                 <th className="px-6 py-4 text-right font-bold">{t('citizens.gender')}</th>
                 <th className="px-6 py-4 text-center font-bold">{t('common.actions')}</th>
@@ -115,7 +120,7 @@ const AllCitizens = () => {
             <tbody>
               {filteredCitizens.length === 0 ? (
                 <tr>
-                  <td colSpan="7" className="px-6 py-8 text-center text-gray-500">
+                  <td colSpan="8" className="px-6 py-8 text-center text-gray-500">
                     {searchTerm ? t('common.noResultsFound') : t('citizens.noCitizens')}
                   </td>
                 </tr>
@@ -149,6 +154,11 @@ const AllCitizens = () => {
                         <FaMapMarkerAlt className="ml-2 text-gray-400" />
                         <span>{citizen.address || t('common.notSpecified')}</span>
                       </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className="inline-flex items-center rounded-full bg-blue-100 px-3 py-1 text-sm font-semibold text-blue-700">
+                        {t(`roles.${citizen.role || 'driver'}`)}
+                      </span>
                     </td>
                     <td className="px-6 py-4">{citizen.dateOfBirth || t('common.notSpecified')}</td>
                     <td className="px-6 py-4">{getGenderLabel(citizen.gender)}</td>

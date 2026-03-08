@@ -82,6 +82,7 @@ DB_CONFIG = {
 }
 
 FRONTEND_BASE_URL = os.getenv('FRONTEND_BASE_URL', 'http://localhost:5173').rstrip('/')
+VALID_ROLES = {'driver', 'police', 'interior', 'transport', 'court', 'traffic'}
 
 def get_db_connection():
     try:
@@ -96,6 +97,12 @@ def hash_password(password):
 
 def verify_password(password, hashed_password):
     return hash_password(password) == hashed_password
+
+
+def normalize_role(role):
+    if role in VALID_ROLES:
+        return role
+    return 'driver'
 
 
 def is_police_user(cursor, id_number):
@@ -114,6 +121,18 @@ def should_send_violation_email(cursor, source, police_id_number):
 
 def build_violation_details_link(violation_id):
     return f"{FRONTEND_BASE_URL}/violations/{violation_id}"
+
+
+def build_violation_email_body(citizen_name, details_link):
+    return f"""
+Dear {citizen_name},
+
+There is a new traffic violation on your record.
+For more details, click here:
+{details_link}
+
+Traffic Management Department
+"""
 
 def send_email(to_email, subject, body):
     if not to_email:
@@ -461,6 +480,7 @@ def add_citizen():
     try:
         password = data.get('password') or '00000'
         password = hash_password(password)
+        role = normalize_role(data.get('role'))
         
         is_update = False
         if data.get('idNumber'):
@@ -488,7 +508,7 @@ def add_citizen():
                 data.get('dateOfBirth'),
                 data.get('gender'),
                 data.get('nationality'),
-                data.get('role', 'driver'),
+                role,
                 data.get('licenseNumber'),
                 data.get('idNumber')
             ))
@@ -506,7 +526,7 @@ def add_citizen():
                 data.get('dateOfBirth'),
                 data.get('gender'),
                 data.get('nationality'),
-                data.get('role', 'driver'),
+                role,
                 data.get('licenseNumber')
             ))
         conn.commit()
@@ -556,7 +576,7 @@ def update_citizen(id_number):
             values.append(data['nationality'])
         if 'role' in data:
             updates.append("role = %s")
-            values.append(data['role'])
+            values.append(normalize_role(data['role']))
         if 'licenseNumber' in data:
             updates.append("license_number = %s")
             values.append(data['licenseNumber'])
@@ -1106,29 +1126,9 @@ def add_violation():
             if violation_info and violation_info[0] and send_email_for_violation:
                 email = violation_info[0]
                 citizen_name = violation_info[1]
-                plate_number = violation_info[2]
-                fine = violation_info[3]
-                date = violation_info[4]
-                time = violation_info[5]
-                location = violation_info[6]
-
                 details_link = build_violation_details_link(violation_id)
                 subject = "New traffic violation notice"
-                body = f"""
-Dear {citizen_name},
-
-There is a new traffic violation on your record.
-For more details, click here:
-{details_link}
-
-Plate number: {plate_number}
-Date: {date}
-Time: {time}
-Location: {location}
-Total fine: {fine} ILS
-
-Traffic Management Department
-"""
+                body = build_violation_email_body(citizen_name, details_link)
                 send_email(email, subject, body)
         except Exception as email_error:
             print(f"Error sending violation email: {str(email_error)}")
@@ -1429,21 +1429,7 @@ def import_violations_excel():
                         details_link = build_violation_details_link(violation_id)
 
                         subject = "New traffic violation notice"
-                        body = f"""
-Dear {citizen_name},
-
-There is a new traffic violation on your record.
-For more details, click here:
-{details_link}
-
-Plate number: {plate_number}
-Date: {date}
-Time: {time}
-Location: {location}
-Total fine: {total_fine} ILS
-
-Traffic Management Department
-"""
+                        body = build_violation_email_body(citizen_name, details_link)
                         send_email(email, subject, body)
                 except Exception as email_error:
                     print(f"Error sending violation email for imported violation: {str(email_error)}")
